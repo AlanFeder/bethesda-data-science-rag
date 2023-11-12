@@ -11,6 +11,7 @@ blinker==1.7.0
 cachetools==5.3.2
 certifi==2023.7.22
 charset-normalizer==3.3.2
+pysqlite3-binary
 chroma-hnswlib==0.7.3
 chromadb==0.4.17
 click==8.1.7
