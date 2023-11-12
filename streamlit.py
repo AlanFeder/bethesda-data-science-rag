@@ -77,7 +77,7 @@ if api_key == '':
 else:
     openai.api_key = api_key# os.getenv('OPENAI_API_KEY')
     title0 = df_meta.loc[df_meta['video_id'] == video_id, 'title'].iloc[0]
-    vectorstore = Chroma(persist_directory=str(here()/'chroma_db'/video_id), embedding_function=OpenAIEmbeddings())
+    vectorstore = Chroma(persist_directory=str(here()/'chroma_db'/video_id), embedding_function=OpenAIEmbeddings(openai_api_key=api_key))
     cost = 0
 
     if st.button('Submit Question'):
