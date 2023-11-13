@@ -77,7 +77,7 @@ question = st.text_area(
     label = 'What question do you want to ask of the meetup talk?'
 )
 if api_key == '':
-    st.error('Please input an Openai API Key')
+    st.error('Please input an Openai API Key in the sidebar area')
 else:
     openai.api_key = api_key# os.getenv('OPENAI_API_KEY')
     title0 = df_meta.loc[df_meta['video_id'] == video_id, 'title'].iloc[0]
