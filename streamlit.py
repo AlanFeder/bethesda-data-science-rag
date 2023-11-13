@@ -8,6 +8,10 @@ from langchain.vectorstores import Chroma
 from langchain.embeddings import OpenAIEmbeddings
 from pyprojroot import here
 import openai
+from openai import OpenAI
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import os
 import tiktoken
 # load_dotenv() 
@@ -145,25 +149,25 @@ else:
 
             {user_prompt}
             '''
-
+            client = OpenAI(api_key=api_key)
             if 'gpt-4' in model_choice:
-                completion = openai.ChatCompletion.create(
+                completion = client.chat.completions.create(
                     model=model_choice, 
                     temperature=0,
                     messages=[{'role':'system', 'content':system_prompt},
                             {'role':'user', 'content': user_prompt}]
                 )
             else:
-                completion = openai.ChatCompletion.create(
+                completion = client.chat.completions.create(
                     model=model_choice, 
                     temperature=0,
                     messages=[{'role':'user', 'content':my_prompt}]
                 )
 
-            model_used = completion['model']
-            prompt_tokens = completion['usage']['prompt_tokens']
-            completion_tokens = completion['usage']['completion_tokens']
-            out_message = completion['choices'][0]['message']['content']
+            model_used = completion.model
+            prompt_tokens = completion.usage.prompt_tokens
+            completion_tokens = completion.usage.completion_tokens
+            out_message = completion.choices[0].message.content
 
 
             # cost_4 = cost35 = cost
