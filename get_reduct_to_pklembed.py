@@ -4,19 +4,6 @@ This code downloads the transcript from a YouTube video and saves the output
 """
 
 
-# This part of the code brings in my OpenAI key , which I have stored as an
-#   environment variable as OPENAI_API_KEY.  We could choose to use a fully
-#   open source model such as one in Huggingface and/or SBERT
-# from dotenv import load_dotenv
-# load_dotenv() 
-
-# There are loaders in langchain for Youtube videos, but I didn't like the way
-#   it did its default chunking, so I am doing it manually
-# from langchain.document_loaders import DataFrameLoader
-# from langchain.vectorstores import Chroma
-# from langchain.embeddings import OpenAIEmbeddings
-# from youtube_transcript_api import YouTubeTranscriptApi as yta
-# from pytube import YouTube
 
 import pandas as pd
 
@@ -29,7 +16,7 @@ from tkinter import messagebox
 
 from sentence_transformers import SentenceTransformer
 
-def ask_user():
+def should_overwrite():
     # Create a root window but keep it hidden
     root = tk.Tk()
     root.withdraw()
@@ -47,29 +34,30 @@ def vector_storize_youtube_vid(fp1):
         creating an app with data this small, I'd probably just store the data
         in a pickle file, but I am keeping this way for the example
     """
+
+    # make an output folder if it doesn't exist
     fp_storing = here()/'video_data'
     if not fp_storing.exists():
         fp_storing.mkdir()
 
+    # get title and video id from file name
     title = fp1.stem[:-18]
     video_id = fp1.stem[-16:-5]
 
-    my_video_path = fp_storing/video_id
+    # make a subfolder for data
+    file_out = f'{video_id}.pkl'
+    my_video_path = fp_storing/file_out
 
-    if not my_video_path.exists():
-        my_video_path.mkdir()
-    else:
-        user_response = ask_user()
-        if not user_response:
+    if my_video_path.exists():
+        to_overwrite = should_overwrite()
+        if not to_overwrite:
             return
-    # Continue with the rest of your script
-
     
     # import reduct output
     with open(fp1, 'r') as f1:
         transcript_words = json.load(f1)
 
-    # agg to segment
+    # aggregate to segment
     transcript_segs = []
     for segment0 in transcript_words['segments']:
         out_dict = {}
@@ -104,29 +92,20 @@ def vector_storize_youtube_vid(fp1):
         dict_texts.append(out_dict)
     df_texts = pd.DataFrame(dict_texts)
 
+    # get data embeddings
     model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
-
     embeddings = model.encode(df_texts['text0'].values)
 
-    # # Move it into langchain
-    # loader = DataFrameLoader(df_texts, page_content_column='text0')
-    # docs = loader.load()
-    
-    # # save ChromaDB locally
-    # vectorstore = Chroma.from_documents(documents=docs, embedding=OpenAIEmbeddings(), persist_directory=str(here()/"chroma_db"/video_id))
-    
-    # fp_texts = here()/'text_dfs'
-    # fp_storing = here()/'video_data'
-    # if not fp_storing.exists():
-    #     fp_storing.mkdir()
 
-    # my
+    # Save all data in pickle files
 
-    # Save raw transcript by minute, too
-    df_tx.to_pickle(my_video_path/f'{video_id}_raw.pkl')
-    df_texts.to_pickle(my_video_path/f'{video_id}_minute.pkl')
-    with open(my_video_path/f'{video_id}_embed.pkl', 'wb') as f1:
-        pickle.dump(embeddings, f1)
+    # df_tx.to_pickle(my_video_path/f'{video_id}_raw.pkl')
+    # df_texts.to_pickle(my_video_path/f'{video_id}_minute.pkl')
+    # with open(my_video_path/f'{video_id}_embed.pkl', 'wb') as f1:
+    #     pickle.dump(embeddings, f1)
+
+    with open(my_video_path, 'wb') as f1:
+        pickle.dump((df_tx, df_texts, embeddings), f1)
     
     # Save metadata for streamlit
     fp_meta = here()/'metadata.csv'
