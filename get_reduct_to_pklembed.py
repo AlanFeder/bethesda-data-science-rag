@@ -1,15 +1,20 @@
 """
 This code downloads the transcript from a YouTube video and saves the output
-    in a format that can be used by our streamlit app
+    in a format that can be used by our streamlit app.  This version of the 
+    code uses my https://reduct.video/ account but you can look at a different
+    file  
 """
 
 
-
+from dotenv import load_dotenv
+load_dotenv()
+import numpy as np
 import pandas as pd
 
 from pyprojroot import here
 import json
 import pickle
+from openai import OpenAI
 
 import tkinter as tk
 from tkinter import messagebox
@@ -93,9 +98,11 @@ def vector_storize_youtube_vid(fp1):
     df_texts = pd.DataFrame(dict_texts)
 
     # get data embeddings
-    model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
-    embeddings = model.encode(df_texts['text0'].values)
-
+    # model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
+    # client = OpenAI
+    embeddings_objs = OpenAI().embeddings.create(model='text-embedding-ada-002', input=df_texts['text0'].to_list() )
+    embeddings_objs = embeddings_objs.data
+    embeddings = np.stack([embed0.embedding for embed0 in embeddings_objs])
 
     # Save all data in pickle files
 

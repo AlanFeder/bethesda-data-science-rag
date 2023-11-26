@@ -1,11 +1,11 @@
-
-
 import streamlit as st
 import numpy as np
 import pandas as pd
 from pyprojroot import here
-import pickle
+from langchain.vectorstores import Chroma
+# from dotenv import load_dotenv
 
+from langchain.embeddings import OpenAIEmbeddings
 from pyprojroot import here
 import openai
 from openai import OpenAI
@@ -14,6 +14,7 @@ import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import os
 import tiktoken
+# load_dotenv() 
 st.set_page_config(page_title='Q&A of Previous Meetups',
                     layout="wide",
                     initial_sidebar_state="expanded"
@@ -61,19 +62,17 @@ video_format_funct = lambda x: df_meta.set_index('video_id')['title'].to_dict()[
 video_id = st.selectbox(
     "Which talk do you want to ask questions about?",
     options=df_meta['video_id'],
-    index=2,
     format_func=video_format_funct
 )
 model_format_funct1 = lambda x: 'GPT 4 (more accurate)' if 'gpt-4' in x else 'GPT 3.5 (cheaper)'
-model_format_funct2 = lambda x: 'GPT 4' if 'gpt-4' in x else 'GPT 3.5'
+model_format_funct2 = lambda x: 'GPT 4' if x =='gpt-4' else 'GPT 3.5'
 model_choice = st.radio(
     'Which ChatGPT version do you want to use?',
     options=['gpt-3.5-turbo-1106', 'gpt-4-1106-preview'],
     index=1,
     format_func = model_format_funct1)
 
-# st.write(model_choice)
-embed_model = 'ada'#'sentence-transformers/all-mpnet-base-v2'
+embed_model = 'ada'
 question = st.text_area(
     label = 'What question do you want to ask of the meetup talk?'
 )
@@ -81,17 +80,8 @@ if api_key == '':
     st.error('Please input an Openai API Key in the sidebar area')
 else:
     openai.api_key = api_key# os.getenv('OPENAI_API_KEY')
-    client = OpenAI(api_key = api_key)
     title0 = df_meta.loc[df_meta['video_id'] == video_id, 'title'].iloc[0]
-
-    fp_storing = here()/'video_data'
-    file_out = f'{video_id}.pkl'
-    my_video_path = fp_storing/file_out
-    with open(my_video_path, 'rb') as f1:
-        df_tx_raw, df_tx_minute, doc_embeddings = pickle.load(f1)
-
-
-    # vectorstore = Chroma(persist_directory=str(here()/'chroma_db'/video_id), embedding_function=OpenAIEmbeddings(openai_api_key=api_key))
+    vectorstore = Chroma(persist_directory=str(here()/'chroma_db'/video_id), embedding_function=OpenAIEmbeddings(openai_api_key=api_key))
     cost = 0
 
     if st.button('Submit Question'):
@@ -101,30 +91,21 @@ else:
         st.divider()
         with st.spinner('Asking the AI...'):
 
+            if embed_model == 'ada':
+                encoding = tiktoken.get_encoding("cl100k_base")
+                n_tok = len(encoding.encode(question))
+                cost += 0.0001 * n_tok / 1000
+            out_docs = vectorstore.similarity_search(question)
 
-            encoding = tiktoken.get_encoding("cl100k_base")
-            n_tok = len(encoding.encode(question))
-            if embed_model in ('ada', 'text-embedding-ada-002'):
-                # cost += 0.0001 * n_tok / 1000
-                q_embedding = client.embeddings.create(model='text-embedding-ada-002', input=question)
-                q_embedding = np.array(q_embedding.data[0].embedding)
-            else:
-                model = SentenceTransformer(embed_model)
-                q_embedding = model.encode(question)
 
-            cos_sims = np.dot(doc_embeddings, q_embedding)
 
-            df_tx_minute['cos_sims'] = cos_sims
-            top_texts = df_tx_minute.sort_values('cos_sims', ascending=False, ignore_index=True).head(4).copy()
-
-            minute_ids = top_texts['minute_id'].values
-
+            minute_ids = np.array([doc0.metadata['minute_id'] for doc0 in out_docs])
             main_minute_id = minute_ids[0]
             minute_list = np.unique(np.concatenate([minute_ids, minute_ids + 1, minute_ids-1]))
 
             minute_list_list = split_into_consecutive(minute_list)
-            # fp_texts = here()/'text_dfs'
-            # df_tx_raw = pd.read_pickle(fp_texts/f'{video_id}_raw.pkl')
+            fp_texts = here()/'text_dfs'
+            df_tx_raw = pd.read_pickle(fp_texts/f'{video_id}_raw.pkl')
             # df_tx_minute = pd.read_pickle(fp_texts/f'{video_id}_minute.pkl')
 
             df_main_minute = df_tx_raw.loc[(df_tx_raw['minute1']==main_minute_id)|(df_tx_raw['minute2']==main_minute_id)]
@@ -137,7 +118,7 @@ else:
                 content0 = f'Context Transcript Section #{i+1}:  '
                 first_min = minute_list0.min()
                 last_min = minute_list0.max()
-                content0 += df_tx_raw.loc[(df_tx_raw['minute1']>= first_min)&(df_tx_raw['minute2']<= last_min), 'text0'].str.cat(sep=' ')
+                content0 += df_tx_raw.loc[(df_tx_raw['minute1']>= first_min)&(df_tx_raw['minute2']<= last_min), 'text'].str.cat(sep=' ')
                 context_text_list.append(content0)
 
 
