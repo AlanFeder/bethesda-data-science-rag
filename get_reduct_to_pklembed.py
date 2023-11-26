@@ -2,26 +2,41 @@
 This code downloads the transcript from a YouTube video and saves the output
     in a format that can be used by our streamlit app.  This version of the 
     code uses my https://reduct.video/ account but you can look at a different
-    file  
+    file ( https://github.com/AlanFeder/bethesda-data-science-rag/blob/main/get_yt_to_chroma.py )
+    to see how to do this fully open-source
 """
 
+# Packages to load
 
+# We can parse it either with an OpenAI embedding model or which an open-source
+#    embedding model such as those from SBERT. In this code, I only use the first
+## I stored my OpenAI API key in my environmental variables
 from dotenv import load_dotenv
 load_dotenv()
+from openai import OpenAI
+
+# If I would have used SentenceTransformer/SBERT, I'd need this
+# from sentence_transformers import SentenceTransformer
+
 import numpy as np
 import pandas as pd
 
 from pyprojroot import here
 import json
 import pickle
-from openai import OpenAI
 
 import tkinter as tk
 from tkinter import messagebox
 
-from sentence_transformers import SentenceTransformer
 
 def should_overwrite():
+    """ This comes from the following ChatGPT prompt:
+    > In my python script, I want to make a popup that asks the user whether to continue or not. If they say "no", the script should end. If they say yes, the script should continue. Can you help me make that?
+
+    > Lets say this is within a function. How can we make it just exit the function
+
+    I then made some further tweaks
+    """
     # Create a root window but keep it hidden
     root = tk.Tk()
     root.withdraw()
@@ -36,8 +51,8 @@ def should_overwrite():
 
 def vector_storize_youtube_vid(fp1):
     """ This is the function that puts the data into a vector store.  If I was 
-        creating an app with data this small, I'd probably just store the data
-        in a pickle file, but I am keeping this way for the example
+        creating an app with large data, I'd use Chroma or a different vector 
+        database such as Qdrant or Pinecone
     """
 
     # make an output folder if it doesn't exist
@@ -98,19 +113,15 @@ def vector_storize_youtube_vid(fp1):
     df_texts = pd.DataFrame(dict_texts)
 
     # get data embeddings
-    # model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
-    # client = OpenAI
     embeddings_objs = OpenAI().embeddings.create(model='text-embedding-ada-002', input=df_texts['text0'].to_list() )
     embeddings_objs = embeddings_objs.data
     embeddings = np.stack([embed0.embedding for embed0 in embeddings_objs])
 
+    # if I was using SBERT, I'd use the following code instead
+    # model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
+    # embeddings = model.encode(df_texts['text0'].to_list())
+
     # Save all data in pickle files
-
-    # df_tx.to_pickle(my_video_path/f'{video_id}_raw.pkl')
-    # df_texts.to_pickle(my_video_path/f'{video_id}_minute.pkl')
-    # with open(my_video_path/f'{video_id}_embed.pkl', 'wb') as f1:
-    #     pickle.dump(embeddings, f1)
-
     with open(my_video_path, 'wb') as f1:
         pickle.dump((df_tx, df_texts, embeddings), f1)
     
