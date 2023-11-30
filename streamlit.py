@@ -238,6 +238,6 @@ st.caption("""I will add a link to the YouTube when available.""")
 st.divider()
 
 st.subheader('Contact me!')
-st.image('AJF_Headshot.jpg', width=30)
+st.image('AJF_Headshot.jpg', width=60)
 st.markdown('[Email](mailto:AlanFeder@gmail.com) | [Website](https://www.alanfeder.com/) | [LinkedIn](https://www.linkedin.com/in/alanfeder/) | [GitHub](https://github.com/AlanFeder)')
 
