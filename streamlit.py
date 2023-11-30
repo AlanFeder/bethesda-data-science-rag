@@ -239,3 +239,5 @@ st.divider()
 
 st.subheader('Contact me!')
 
+st.markdown('[Email](mailto:AlanFeder@gmail.com) | [Website](https://www.alanfeder.com/) | [LinkedIn](https://www.linkedin.com/in/alanfeder/) | [GitHub](https://github.com/AlanFeder)')
+
