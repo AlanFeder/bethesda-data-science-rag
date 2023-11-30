@@ -228,3 +228,11 @@ else:
 
         _, container, _ = st.columns([side, width, side])
         container.video(f'http://youtube.com/watch?v={video_id}', start_time=int(start_time))
+
+
+st.divider()
+
+st.markdown('''This streamlit app was created for Alan Feder's [talk at the Bethesda Data Science Meetup](https://www.meetup.com/bethesda-data-science-networking-meetup/events/297264697/).  The slides he used are [here](https://bit.ly/bethesda-ds-presentation).  The Github repository that houses all the code is [here](https://github.com/AlanFeder/bethesda-data-science-rag) -- feel free to fork it and use it on your own!''')
+st.markdown("""I will add a link to the YouTube when available.""")
+
+
