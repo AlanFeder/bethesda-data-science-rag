@@ -1,5 +1,8 @@
+""" This is the live streamlit app I showed during the meetup
+"""
 
 
+# Packages
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -9,25 +12,40 @@ import pickle
 from pyprojroot import here
 import openai
 from openai import OpenAI
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
+# I don't need this part when I run it locally, it has something to do with the
+#   streamlit cloud environment for chroma 
+#   https://discuss.streamlit.io/t/issues-with-chroma-and-sqlite/47950
+# __import__('pysqlite3')
+# import sys
+# sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import os
 import tiktoken
+
+# This needs to be at the top of most streamlit apps
 st.set_page_config(page_title='Q&A of Previous Meetups',
                     layout="wide",
                     initial_sidebar_state="expanded"
                     )
 
 
+# If you run it locally, you can just do a dotenv to store your OpenAI API Key
+# as an environment variable 
 with st.sidebar:
     api_key = st.text_input(
         label="Input your OpenAI API Key (don't worry, this isn't stored anywhere)",
         type='password'
     )
 
+    st.markdown('''If you don't have an OpenAI API key, you can sign up [here](https://platform.openai.com/account/api-keys).''')
+
 
 def split_into_consecutive(arr):
+    """ I got the following function from the following GPT prompt
+    > I have a numpy array of numbers.  some are consecutive, some are not (e.g. 3, 4, 5, 6, 10, 11, 12, 13, 19, 20, 21).  How can I split it into a list of arrays, where each sub-element is just the consecutive parts (e.g. [[3,4,5,6],[10,11,12,13],[19,20,21]])?
+
+    The goal is so that if there are consecutive minutes, and I look at the before-and-after, they are combined as needed
+    """
     # List to store the result
     result = []
     # Temporary list to store current sequence
@@ -51,19 +69,21 @@ def split_into_consecutive(arr):
 
 st.title("Ask Questions of Previous Bethesda Data Science Speakers with ChatGPT!")
 
-
+# Get list of all available videos
 fp_meta = here()/'metadata.csv'
 df_meta = pd.read_csv(fp_meta)
 
+# Selectbox for choosing which video to query
 video_format_funct = lambda x: df_meta.set_index('video_id')['title'].to_dict()[x]
-
-
 video_id = st.selectbox(
     "Which talk do you want to ask questions about?",
     options=df_meta['video_id'],
     index=2,
     format_func=video_format_funct
 )
+
+# radio button for choosing between gpt-4 and gpt-3.5 . I'd love to build in 
+#   ability to use an open-source model, or claude 2.1
 model_format_funct1 = lambda x: 'GPT 4 (more accurate)' if 'gpt-4' in x else 'GPT 3.5 (cheaper)'
 model_format_funct2 = lambda x: 'GPT 4' if 'gpt-4' in x else 'GPT 3.5'
 model_choice = st.radio(
