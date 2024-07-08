@@ -9,7 +9,7 @@ backoff==2.2.1
 bcrypt==4.0.1
 blinker==1.7.0
 cachetools==5.3.2
-certifi==2023.7.22
+certifi==2024.7.4
 charset-normalizer==3.3.2
 pysqlite3-binary
 chroma-hnswlib==0.7.3
