@@ -13,12 +13,6 @@ from pyprojroot import here
 import openai
 from openai import OpenAI
 
-# I don't need this part when I run it locally, it has something to do with the
-#   streamlit cloud environment for chroma 
-#   https://discuss.streamlit.io/t/issues-with-chroma-and-sqlite/47950
-# __import__('pysqlite3')
-# import sys
-# sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import os
 import tiktoken
 
@@ -111,7 +105,6 @@ else:
         df_tx_raw, df_tx_minute, doc_embeddings = pickle.load(f1)
 
 
-    # vectorstore = Chroma(persist_directory=str(here()/'chroma_db'/video_id), embedding_function=OpenAIEmbeddings(openai_api_key=api_key))
     cost = 0
 
     if st.button('Submit Question'):

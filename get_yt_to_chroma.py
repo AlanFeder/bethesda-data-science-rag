@@ -9,24 +9,20 @@ This code downloads the transcript from a YouTube video and saves the output
 from dotenv import load_dotenv
 load_dotenv() 
 
-# There are loaders in langchain for Youtube videos, but I didn't like the way
-#   it did its default chunking, so I am doing it manually
-from langchain.document_loaders import DataFrameLoader
-from langchain.vectorstores import Chroma
-from langchain.embeddings import OpenAIEmbeddings
+# Chunk the transcript by minute and store embeddings directly with NumPy.
+from openai import OpenAI
 from youtube_transcript_api import YouTubeTranscriptApi as yta
 from pytube import YouTube
 
+import numpy as np
 import pandas as pd
+import pickle
 
 from pyprojroot import here
 
 
 def vector_storize_youtube_vid(video_id):
-    """ This is the function that puts the data into a vector store.  If I was 
-        creating an app with data this small, I'd probably just store the data
-        in a pickle file, but I am keeping this way for the example
-    """
+    """Download a transcript and save local embeddings for the Streamlit app."""
 
     # Get the title and description for the given YouTube video    
     yt = YouTube(f'http://youtube.com/watch?v={video_id}')
@@ -44,10 +40,11 @@ def vector_storize_youtube_vid(video_id):
         description0 = ''
         
     # Download the automated transcript
-    transcript = yta.get_transcript(video_id, preserve_formatting=True)
+    transcript = yta().fetch(video_id, preserve_formatting=True).to_raw_data()
 
     # Reformat as dataframe for manipulation
     df_tx = pd.DataFrame(transcript)
+    df_tx['text0'] = df_tx['text']
     
     # Identify which minute each section of the text takes place in
     df_tx['minute1'] = (df_tx['start']/60).astype(int)
@@ -71,12 +68,16 @@ def vector_storize_youtube_vid(video_id):
         dict_texts.append(out_dict)
     df_texts = pd.DataFrame(dict_texts)
 
-    # Move it into langchain
-    loader = DataFrameLoader(df_texts, page_content_column='text0')
-    docs = loader.load()
-    
-    # save ChromaDB locally
-    vectorstore = Chroma.from_documents(documents=docs, embedding=OpenAIEmbeddings(), persist_directory=str(here()/"chroma_db"/video_id))
+    # Use the NumPy retrieval format already consumed by streamlit.py. ChromaDB
+    # has no patched release for its current security advisories.
+    response = OpenAI().embeddings.create(
+        model='text-embedding-ada-002', input=df_texts['text0'].tolist()
+    )
+    embeddings = np.stack([item.embedding for item in sorted(response.data, key=lambda item: item.index)])
+    fp_storing = here()/'video_data'
+    fp_storing.mkdir(exist_ok=True)
+    with open(fp_storing/f'{video_id}.pkl', 'wb') as output:
+        pickle.dump((df_tx, df_texts, embeddings), output)
     
     fp_texts = here()/'text_dfs'
     if not fp_texts.exists():
@@ -92,11 +93,10 @@ def vector_storize_youtube_vid(video_id):
     else:
         df_meta = pd.DataFrame(columns = ['video_id', 'title', 'description'])
     
-    if not video_id in df_meta['video_id']:
-        row_info = {'video_id':video_id, 'title':title, 'description':description0}
-        df_size = df_meta.shape[0]
-        df_meta.loc[df_size] = row_info
-        df_meta.to_csv(fp_meta, index=False)
+    df_meta = df_meta.loc[df_meta['video_id'] != video_id].copy()
+    row_info = pd.DataFrame([{'video_id':video_id, 'title':title, 'description':description0}])
+    df_meta = pd.concat([df_meta, row_info], ignore_index=True)
+    df_meta.to_csv(fp_meta, index=False)
 
 
 if __name__ == "__main__":
