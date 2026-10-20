@@ -5,7 +5,7 @@ openai>=1.109.1,<2
 pyprojroot>=0.3.0,<0.4
 python-dotenv>=1.2.2,<2
 pytube>=15.0.0,<16
-streamlit>=1.55.0,<1.56
+streamlit>=1.66.0,<1.67
 tiktoken>=0.12.0,<1
 youtube-transcript-api>=1.2.4,<2
 
